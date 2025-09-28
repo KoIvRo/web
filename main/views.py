@@ -1,5 +1,9 @@
-from django.shortcuts import render, get_object_or_404
+# main/views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
 from .models import Post
+from .forms import PostForm, LoginForm
 
 def index(request):
     latest_posts = Post.objects.all().order_by('-created_at')[:2]
@@ -16,3 +20,38 @@ def blog_list(request):
 def blog_detail(request, slug):
     post = get_object_or_404(Post, slug=slug)
     return render(request, "main/blog_detail.html", {"post": post})
+
+def custom_login(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        form = LoginForm(request, data=request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            return redirect('home')
+    else:
+        form = LoginForm()
+    return render(request, 'main/login.html', {'form': form})
+
+def custom_logout(request):
+    logout(request)
+    return redirect('home')
+
+@login_required
+def add_post(request):
+    if request.method == 'POST':
+        form = PostForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('home')
+    else:
+        form = PostForm()
+    return render(request, 'main/add_post.html', {'form': form})
+
+@login_required
+def delete_post(request, slug):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    post = get_object_or_404(Post, slug=slug)
+    post.delete()
+    return redirect('blog_list')

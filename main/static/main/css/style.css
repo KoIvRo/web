@@ -81,7 +81,7 @@ body {
 
 .skills li {
     display: inline-block;
-    background: #f8f9fa;
+    background: #ededed;
     padding: 5px 15px;
     margin: 5px;
     border-radius: 15px;
@@ -98,7 +98,7 @@ body {
 .card {
     flex: 1;
     min-width: 300px;
-    background: #f8f9fa;
+    background: #ededed;
     padding: 20px;
     border-radius: 5px;
 }
@@ -111,7 +111,7 @@ body {
 }
 
 .post {
-    background: #f8f9fa;
+    background: #ededed;
     padding: 20px;
     margin: 15px 0;
     border-radius: 5px;
