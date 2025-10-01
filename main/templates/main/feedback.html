@@ -1,0 +1,10 @@
+{% extends "main/index.html" %}
+{% block content %}
+<section class="post">
+    <form method="post">
+        {% csrf_token %}
+        <p>{{ form.message }}</p>
+        <button type="submit">Отправить</button>
+    </form>
+</section>
+{% endblock %}

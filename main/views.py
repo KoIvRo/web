@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from .models import Post
-from .forms import PostForm, LoginForm
+from .forms import PostForm, LoginForm, FeedbackForm
 
 def index(request):
     latest_posts = Post.objects.all().order_by('-created_at')[:2]
@@ -21,6 +21,18 @@ def blog_list(request):
 def blog_detail(request, slug):
     post = get_object_or_404(Post, slug=slug)
     return render(request, "main/blog_detail.html", {"post": post})
+
+def feedback(request):
+    if request.method == 'POST':
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            message = form.cleaned_data['message']
+            print(f'{"FeedBack":=^30}')
+            print(message)
+            return redirect('home')
+    else:
+        form = FeedbackForm()
+    return render(request, 'main/feedback.html', {'form': form})
 
 def custom_login(request):
     if request.user.is_authenticated:
