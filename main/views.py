@@ -1,4 +1,4 @@
-# main/views.py
+from django.utils import timezone
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -9,7 +9,8 @@ def index(request):
     latest_posts = Post.objects.all().order_by('-created_at')[:2]
     
     context = {
-        'latest_posts': latest_posts
+        'latest_posts': latest_posts,
+        'now': timezone.now()
     }
     return render(request, "main/index.html", context)
 

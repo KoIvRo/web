@@ -102,6 +102,9 @@
           {% for post in latest_posts %}
             <article class="post">
               <h3><a href="{% url 'blog_detail' post.slug %}">{{ post.title }}</a></h3>
+              {% if post.created_at|date:"d.m.Y" ==  now|date:"d.m.Y"%}
+                <p class="meta"> Новое! </p>
+              {% endif %}
               <p class="meta">{{ post.created_at|date:"d.m.Y H:i" }}</p>
               <p>{{ post.content|truncatewords:30 }}</p>
             </article>

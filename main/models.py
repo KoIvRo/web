@@ -7,8 +7,3 @@ class Post(models.Model):
     slug = models.SlugField("URL", unique=True)
     content = models.TextField("Содержимое")
     created_at = models.DateTimeField("Дата публикации", default=timezone.now)
-    
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.title)
-        super().save(*args, **kwargs)
