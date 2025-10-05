@@ -5,6 +5,10 @@ body {
     line-height: 1.5;
 }
 
+main {
+    margin-top: 60px;
+}
+
 .container {
     max-width: 1000px;
     margin: 0 auto;
@@ -17,14 +21,15 @@ body {
     border-bottom: 1px solid #ddd;
     position: fixed;
     width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 1000;
 }
 
 .header-inner {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    top: 0;
-    z-index: 100;
 }
 
 .brand {
