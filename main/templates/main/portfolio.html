@@ -1,0 +1,38 @@
+{% extends "main/index.html" %}
+{% load static%}
+{% block content %}
+<section id="portfolio" class="portfolio">
+  <div class="container">
+    <h2>Портфолио</h2>
+    <div class="grid">
+        <article class="card">
+        <img src="{% static 'main/images/portfolio1.jpg' %}" alt="Проект 1">
+        <div class="card-body">
+            <a href="https://github.com/KoIvRo/T-academy-homework/tree/main/hw1-hangman">
+            <h3>HangMan</h3>
+          </a>
+          <p>Классическая виселица в терминале на Python</p>
+        </div>
+        </article>
+        <article class="card">
+        <img src="{% static 'main/images/portfolio2.jpg' %}" alt="Проект 2">
+        <div class="card-body">
+            <a href="https://github.com/KoIvRo/telegram_cloud">
+            <h3>Облако по переписке Telegram</h3>
+          </a>
+          <p>Программа нарисует облако по вашей переписке из телеграмма</p>
+        </div>
+      </article>
+        <article class="card">
+        <img src="{% static 'main/images/portfolio3.jpg' %}" alt="Проект 3">
+        <div class="card-body">
+            <a href="https://github.com/KoIvRo/Fighting">
+            <h3>Игра fighting</h3>
+          </a>
+          <p>Игра на pygame</p>
+        </div>
+      </article>
+    </div>
+    </div>
+</section>
+{% endblock %}

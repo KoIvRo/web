@@ -14,6 +14,9 @@ def index(request):
     }
     return render(request, "main/index.html", context)
 
+def portfolio(request):
+    return render(request, "main/portfolio.html")
+
 def blog_list(request):
     posts = Post.objects.all()
     return render(request, "main/blog_list.html", {"posts": posts})
