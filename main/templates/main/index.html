@@ -73,7 +73,7 @@
               {% if post.created_at|date:"d.m.Y" ==  now|date:"d.m.Y"%}
                 <p class="meta"> Новое! </p>
               {% endif %}
-              <h3><a href="{% url 'blog_detail' post.slug %}">{{ post.title }}</a></h3>
+              <h3><a href="{% url 'blog_detail' post.id %}">{{ post.title }}</a></h3>
               <p class="meta">{{ post.created_at|date:"d.m.Y H:i" }}</p>
               <p>{{ post.content|truncatewords:30 }}</p>
             </article>

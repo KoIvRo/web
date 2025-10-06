@@ -21,8 +21,8 @@ def blog_list(request):
     posts = Post.objects.all()
     return render(request, "main/blog_list.html", {"posts": posts})
 
-def blog_detail(request, slug):
-    post = get_object_or_404(Post, slug=slug)
+def blog_detail(request, id):
+    post = get_object_or_404(Post, id=id)
     return render(request, "main/blog_detail.html", {"post": post})
 
 def feedback(request):
@@ -65,9 +65,9 @@ def add_post(request):
     return render(request, 'main/add_post.html', {'form': form})
 
 @login_required
-def delete_post(request, slug):
+def delete_post(request, id):
     if not request.user.is_authenticated:
         return redirect('home')
-    post = get_object_or_404(Post, slug=slug)
+    post = get_object_or_404(Post, id=id)
     post.delete()
     return redirect('blog_list')
