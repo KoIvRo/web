@@ -3,6 +3,10 @@
 <section class="post">
     <form method="post">
         {% csrf_token %}
+        {% if form.mail.errors %}
+            {{ form.mail.errors }}
+        {% endif %}
+        <p>{{ form.mail }}</p>
         <p>{{ form.message }}</p>
         <button type="submit">Отправить</button>
     </form>

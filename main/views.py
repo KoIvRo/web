@@ -29,10 +29,14 @@ def feedback(request):
     if request.method == 'POST':
         form = FeedbackForm(request.POST)
         if form.is_valid():
+            mail = form.cleaned_data['mail']
             message = form.cleaned_data['message']
             print(f'{"FeedBack":=^30}')
+            print(mail)
             print(message)
             return redirect('home')
+        else:
+            form.clean()
     else:
         form = FeedbackForm()
     return render(request, 'main/feedback.html', {'form': form})
