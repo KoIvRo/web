@@ -1,0 +1,28 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h2>Регистрация</h2>
+        {% if form.errors %}
+            <div style="background: #ffebee; color: #c62828; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+                <strong>Ошибки:</strong>
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <p>{{ form.username }}</p>
+            <p>{{ form.email }}</p>
+            <p>{{ form.password1 }}</p>
+            <p>{{ form.password2 }}</p>
+            <button type="submit" class="btn primary">Зарегистрироваться</button>
+            <p>Уже есть аккаунт? <a href="{% url 'login' %}">Войдите</a></p>
+        </form>
+    </div>
+</section>
+{% endblock %}

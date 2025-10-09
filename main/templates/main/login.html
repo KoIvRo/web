@@ -1,34 +1,16 @@
+{% extends "main/index.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Вход</title>
-    <link rel="stylesheet" href="{% static 'main/css/style.css' %}">
-</head>
-<body>
-    <header class="site-header">
-        <div class="container header-inner">
-            <a class="brand" href="{% url 'home' %}">Иван Коротаев</a>
-            <nav class="main-nav">
-                <a href="{% url 'home' %}">Главная</a>
-            </nav>
-        </div>
-    </header>
-
-    <main>
-        <section class="hero">
-            <div class="container">
-                <h2>Вход</h2>
-                <form method="post">
-                    {% csrf_token %}
-                    <p>{{ form.username }}</p>
-                    <p>{{ form.password }}</p>
-                    <button type="submit" class="btn primary">Войти</button>
-                </form>
-                <a href="{% url 'home' %}" class="btn ghost">На главную</a>
-            </div>
-        </section>
-    </main>
-</body>
-</html>
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h2>Вход</h2>
+        <form method="post">
+            {% csrf_token %}
+            <p>{{ form.username }}</p>
+            <p>{{ form.password }}</p>
+            <button type="submit" class="btn primary">Войти</button>
+        </form>
+        <a href="{% url 'home' %}" class="btn ghost">На главную</a>
+    </div>
+</section>
+{% endblock %}

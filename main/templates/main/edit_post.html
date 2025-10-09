@@ -1,0 +1,14 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block content %}
+<section class="about">
+    <div class="container">
+        <h2>Редактировать пост</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn primary">Сохранить</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

@@ -8,11 +8,64 @@
     </p>
     <article class="post">
       <h2>{{ post.title }}</h2>
+      <p class="meta">{{ post.category }}</p>
+      <p class="meta">{{ post.author }}</p>
       <p class="meta">{{ post.created_at|date:"d.m.Y H:i" }}</p>
       <div>
         {{ post.content|linebreaks }}
       </div>
+      {% if user.is_authenticated and user == post.author or user.is_staff %}
+        <a href="{% url 'edit_post' post.id %}" 
+          style="color: #0066cc; text-decoration: none; margin-left: 10px;">
+          Редактировать
+        </a>
+        <a href="{% url 'delete_post' post.id %}" 
+          style="color: red; text-decoration: none; margin-left: 10px;">
+          Удалить
+        </a>
+      {% endif %}
     </article>
+
+  <div class="comments" style="margin-top: 40px;">
+      <h3>Комментарии ({{ comments.count }})</h3>
+      {% for comment in comments %}
+        <div class="comment" style="background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px;">
+          <div style="display: flex; justify-content: between; align-items: center;">
+            <strong>{{ comment.author.username }}</strong>
+            <small style="color: #666; margin-left: auto;">
+              {{ comment.created_at|date:"d.m.Y H:i" }}
+            </small>
+          </div>
+          <p style="margin: 10px 0 0 0;">{{ comment.text|linebreaks }}</p>
+      {% if user.is_authenticated and user == comment.author or user.is_authenticated and user == post.author or user.is_staff %}
+        <form method="post" action="{% url 'delete_comment' comment.id %}" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn ghost">Удалить</button>
+        </form>
+      {% endif %}
+        </div>
+      {% empty %}
+        <p style="color: #666; text-align: center;">Комментариев пока нет</p>
+      {% endfor %}
+
+      {% if user.is_authenticated %}
+        <div class="comment-form" style="margin-top: 30px;">
+          <h4>Оставить комментарий</h4>
+          <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom: 15px;">
+              {{ form.text }}
+            </div>
+            <button type="submit" class="btn primary">Отправить комментарий</button>
+          </form>
+        </div>
+      {% else %}
+        <p style="text-align: center; margin-top: 20px;">
+          <a href="{% url 'login' %}">Войдите</a>, чтобы оставить комментарий
+        </p>
+      {% endif %}
+    </div>
+  </div>
   </div>
 </section>
 {% endblock %}
