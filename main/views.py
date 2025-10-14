@@ -114,7 +114,7 @@ def add_post(request):
 def edit_post(request, id):
     post = get_object_or_404(Post, id=id)
 
-    if post.author != request.user:
+    if (not request.user.is_staff) and post.author != request.user:
         return redirect('home')
     
     if request.method == 'POST':
