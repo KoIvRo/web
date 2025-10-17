@@ -9,7 +9,7 @@
     <article class="post">
       <h2>{{ post.title }}</h2>
       <p class="meta">{{ post.category }}</p>
-      <p class="meta">{{ post.author }}</p>
+      <p class="meta">{{ post.author_name }}</p>
       <p class="meta">{{ post.created_at|date:"d.m.Y H:i" }}</p>
       <div>
         {{ post.content|linebreaks }}
@@ -27,18 +27,22 @@
     </article>
 
   <div class="comments" style="margin-top: 40px;">
-      <h3>Комментарии ({{ comments.count }})</h3>
+      <h3>Комментарии ({{ post.comments_count }})</h3>
       {% for comment in comments %}
         <div class="comment" style="background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px;">
           <div style="display: flex; justify-content: between; align-items: center;">
-            <strong>{{ comment.author.username }}</strong>
+            <strong>{{ comment.author_name }}</strong>
             <small style="color: #666; margin-left: auto;">
               {{ comment.created_at|date:"d.m.Y H:i" }}
             </small>
           </div>
           <p style="margin: 10px 0 0 0;">{{ comment.text|linebreaks }}</p>
       {% if user.is_authenticated and user == comment.author or user.is_authenticated and user == post.author or user.is_staff %}
-        <form method="post" action="{% url 'delete_comment' comment.id %}" style="display: inline;">
+        <form method="post" action="{% url 'edit_comment' comment.id post.id %}" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn ghost">Редактировать</button>
+        </form>
+        <form method="post" action="{% url 'delete_comment' comment.id post.id %}" style="display: inline;">
           {% csrf_token %}
           <button type="submit" class="btn ghost">Удалить</button>
         </form>

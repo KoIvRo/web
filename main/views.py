@@ -1,3 +1,4 @@
+import requests
 from django.utils import timezone
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, logout
@@ -5,14 +6,23 @@ from django.contrib.auth.decorators import login_required
 from .models import Post, Comment
 from .forms import PostForm, LoginForm, FeedbackForm, UserRegisterForm, CommentForm
 
+API_URL = "http://127.0.0.1:8001"
+
+def get_api_data(url):
+    response = requests.get(f"{API_URL}{url}")
+    if response.status_code == 200:
+        return response.json()
+    return None
 
 def index(request):
-    latest_posts = Post.objects.all().order_by('-created_at')[:2]
+    #latest_posts = Post.objects.all().order_by('-created_at')[:2] Раньше было так
+    latest_posts = get_api_data("/articles")
     
     context = {
         'latest_posts': latest_posts,
         'now': timezone.now()
     }
+
     return render(request, "main/index.html", context)
 
 def portfolio(request):
@@ -20,16 +30,20 @@ def portfolio(request):
 
 def blog_list(request, category=None):
     message = None
+    print(category)
     if category:
         valid_categories = [choice[0] for choice in Post.CATEGORY_CHOICES]
         if category not in valid_categories:
-            posts = Post.objects.all()
+            posts = get_api_data("/articles")
+            #posts = Post.objects.all()
             message = f"Категория '{category}' не найдена"
         else:
-            posts = Post.objects.filter(category=category)
+            posts = get_api_data(f"/articles/category/{category}")
+            #posts = Post.objects.filter(category=category)
             message = None
     else:
-        posts = Post.objects.all()
+        posts = get_api_data("/articles")
+        #posts = Post.objects.all()
 
     return render(request, "main/blog_list.html", {
         "posts": posts,
@@ -39,19 +53,23 @@ def blog_list(request, category=None):
         })
 
 def blog_detail(request, id):
-    post = get_object_or_404(Post, id=id)
+    post = get_api_data(f"/articles/{id}")
+    #post = get_object_or_404(Post, id=id)
     if request.method == 'POST':
         form = CommentForm(request.POST)
         if form.is_valid():
-            comment = form.save(commit=False)
-            comment.post = post
-            comment.author = request.user
-            comment.save()
-            return redirect('blog_detail', id=post.id)
+            payload = {
+                "text": form.cleaned_data['text'],
+                "author_id": request.user.id,
+                "post_id": id
+            }
+            resp = requests.post(f"{API_URL}/articles/{id}/comments", json=payload)
+            return redirect("blog_detail", id)
     else:
         form = CommentForm()
 
-    comments = post.comments.all().order_by('-created_at')
+    comments = get_api_data(f"/articles/{id}/comments")
+    #comments = post.comments.all().order_by('-created_at')
     return render(request, "main/blog_detail.html", {"post": post, "comments": comments, "form": form})
 
 def feedback(request):
@@ -102,49 +120,106 @@ def add_post(request):
     if request.method == 'POST':
         form = PostForm(request.POST)
         if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            post.save()
-            return redirect('home')
+            payload = {
+                "title": form.cleaned_data['title'],
+                "content": form.cleaned_data['content'],
+                "category": form.cleaned_data['category'],
+                "author_id": request.user.id
+            }
+
+            resp = requests.post(f"{API_URL}/articles/", json=payload)
+            if resp.status_code == 201:
+                return redirect('blog_list')
     else:
         form = PostForm()
-    return render(request, 'main/add_post.html', {'form': form})
 
-@login_required
-def edit_post(request, id):
-    post = get_object_or_404(Post, id=id)
-
-    if (not request.user.is_staff) and post.author != request.user:
-        return redirect('home')
-    
-    if request.method == 'POST':
-        form = PostForm(request.POST, instance=post)
-        if form.is_valid():
-            form.save()
-            return redirect('blog_detail', id=post.id)
-    else:
-        form = PostForm(instance=post)
-    return render(request, 'main/edit_post.html', {'form': form})
+    return render(request,'main/add_post.html', {"form": form})
 
 
 @login_required
 def delete_post(request, id):
-    post = get_object_or_404(Post, id=id)
-    if post.author != request.user:
-        return redirect('home')
-    post.delete()
+    try:
+        requests.delete(f"{API_URL}/articles/{id}")
+    except:
+        return redirect("home")
+    
     return redirect('blog_list')
 
-@login_required
-def delete_comment(request, comment_id):
-    comment = get_object_or_404(Comment, id=comment_id)
-    post_id = comment.post.id
+def edit_post(request):
+    return render(request, 'main/edit_post')
 
-    if not (comment.author == request.user or 
-            comment.post.author == request.user or 
+
+@login_required
+def edit_post(request, id):
+    resp = requests.get(f"{API_URL}/articles/{id}")
+    if resp.status_code == 404:
+        return redirect('blog_list')
+    post_data = resp.json()
+
+    if request.method == 'POST':
+        form = PostForm(request.POST)
+        if form.is_valid():
+            updated_data = {
+                "title": form.cleaned_data["title"],
+                "content": form.cleaned_data["content"],
+                "category": form.cleaned_data["category"],
+            }
+            put_resp = requests.put(f"{API_URL}/articles/{id}", json=updated_data)
+
+            if put_resp.status_code == 200:
+                return redirect('blog_detail', id=id)
+    else:
+        form = PostForm(initial={
+            "title": post_data["title"],
+            "content": post_data["content"],
+            "category": post_data["category"],
+        })
+
+    return render(request, 'main/edit_post.html', {'form': form})
+
+
+@login_required
+def delete_comment(request, comment_id, post_id):
+    post = get_api_data(f"/articles/{post_id}")
+    comment = get_api_data(f"/comments/{comment_id}")
+
+    if not (comment['author_id'] == request.user.id or 
+            post['author_id'] == request.user.id or 
             request.user.is_staff):
         return redirect('blog_detail', id=post_id)
 
-    comment.delete()
-    
+    resp = requests.delete(f"{API_URL}/comments/{comment_id}")
     return redirect('blog_detail', id=post_id)
+
+@login_required
+def edit_comment(request, comment_id, post_id):
+    post = get_api_data(f"/articles/{post_id}")
+    comment = get_api_data(f"/comments/{comment_id}")
+
+    if not (comment['author_id'] == request.user.id or 
+            post['author_id'] == request.user.id or 
+            request.user.is_staff):
+        return redirect('blog_detail', id=post_id)
+
+    resp = requests.get(f"{API_URL}/comments/{comment_id}")
+    if not resp:
+        return redirect('blog_detail', post_id)
+    
+    comment_data = resp.json()
+
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            updated_data = {
+                "text": form.cleaned_data["text"],
+            }
+            put_resp = requests.put(f"{API_URL}/comments/{comment_id}", json=updated_data)
+
+            if put_resp.status_code == 200:
+                return redirect('blog_detail', id=post_id)
+    else:
+        form = CommentForm(initial={
+            "text": comment_data["text"],
+        })
+
+    return render(request, 'main/edit_comment.html', {'form': form})
