@@ -1,10 +1,5 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker, relationship
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import Column, Integer, String, Text, DateTime
-from fastapi import FastAPI
-
-
-DATABASE_URL = "sqlite:///./db.sqlite3"
 
 class Base(DeclarativeBase):
     pass
@@ -37,7 +32,3 @@ class Comment(Base):
     text = Column(Text)
     post_id = Column(Integer)
     author_id = Column(Integer)
-
-
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread":False})
-session = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -70,7 +70,7 @@
         <div class="posts">
           {% for post in latest_posts %}
             <article class="post">
-              {% if post.created_at|date:"d.m.Y" ==  now|date:"d.m.Y"%}
+              {% if post.created_at|slice:":10" == now|date:"Y-m-d" %}
                 <p class="meta"> Новое! </p>
               {% endif %}
               <h3><a href="{% url 'blog_detail' post.id %}">{{ post.title }}</a></h3>

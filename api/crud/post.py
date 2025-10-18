@@ -1,86 +1,18 @@
-from database import *
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-# import os
-# import django
-# from django.shortcuts import get_object_or_404
-
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
-# django.setup()
-
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
-from typing import Optional
-from enum import Enum
+from .schemas import PostCreate, PostUpdate, PostOut, CategoryEnum, CommentOut
 import datetime
-# from main.models import Post
+from database.database import get_db
+from database.models import Post, User, Comment
 
 
-class CategoryEnum(str, Enum):
-    PROGRAMMING = "programming"
-    DJANGO = "django"
-    PYTHON = "python"
-    WEB = "web"
-    OTHER = "other"
+post_router = APIRouter()
 
 
-def get_db():
-    db = session()
-    try:
-        yield db
-    finally:
-        db.close()
-
-app = FastAPI()
-
-class PostOut(BaseModel):
-    id: int
-    title: str
-    content: str
-    category: str
-    author_id: int
-    author_name: str
-    created_at: str
-    comments_count: int
-
-class CommentOut(BaseModel):
-    id: int
-    text: str
-    author_name: str
-    created_at: str
-
-
-class PostCreate(BaseModel):
-    title: str = Field(None, min_length=1, max_length=200)
-    content: str = Field(None, min_length=1)
-    category: str
-    author_id: int
-
-
-class PostUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    content: Optional[str] = Field(None, min_length=1)
-    category: Optional[str]
-
-
-class CommentCreate(BaseModel):
-    text: str = Field(None, min_length=1)
-    author_id: int
-    post_id: int
-
-
-class CommentUpdate(BaseModel):
-    text: Optional[str] = Field(None, min_length=1)
-
-
-@app.get("/")
-def get_root():
-    return HTMLResponse("<h2>API ВКЛЮЧЕНО</h2>")
-
-@app.get("/articles/{id}", response_model=PostOut)
+@post_router.get("/{id}", response_model=PostOut)
 def get_article(id: int, db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == id).first()
-    # post = get_object_or_404(Post, id=id)
+
     if not post:
         raise HTTPException(status_code=404, detail="Статья не найдена")
     
@@ -98,18 +30,16 @@ def get_article(id: int, db: Session = Depends(get_db)):
         author_id=post.author_id,
         author_name=author.username,
         created_at=post.created_at.isoformat() if post.created_at else "",
-        # comments_count=post.comments.count()
         comments_count=comments_count
     )
 
-@app.get("/articles/", response_model=list[PostOut])
-@app.get("/articles/category/{category}", response_model=list[PostOut])
+
+@post_router.get("/", response_model=list[PostOut])
+@post_router.get("/category/{category}", response_model=list[PostOut])
 def get_articles(category: None | str = None, db: Session = Depends(get_db)):
     query = db.query(Post)
-    # posts = Post.objects.all().select_related("author").prefetch_related("comments").order_by('-created_at')
     
     if category:
-        # posts = posts.filter(category=category)
         query = query.filter(Post.category == category)
     
     posts = query.order_by(Post.created_at.desc()).all()
@@ -134,13 +64,7 @@ def get_articles(category: None | str = None, db: Session = Depends(get_db)):
     return result_list
 
 
-@app.get("/categories/")
-def get_categories(db: Session = Depends(get_db)):
-    categories = db.query(Post.category).distinct().all()
-    return [category[0] for category in categories]
-
-
-@app.post("/articles/", response_model=PostOut, status_code=status.HTTP_201_CREATED)
+@post_router.post("/", response_model=PostOut, status_code=status.HTTP_201_CREATED)
 def create_articles(post_data: PostCreate, db: Session = Depends(get_db)):
     author = db.query(User).filter(User.id==post_data.author_id).first()
 
@@ -173,19 +97,8 @@ def create_articles(post_data: PostCreate, db: Session = Depends(get_db)):
         comments_count = 0
     )
 
-@app.delete("/articles/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_article(post_id: int, db: Session = Depends(get_db)):
-    post = db.query(Post).filter(Post.id==post_id).first()
 
-    if not post:
-        raise HTTPException(status_code=404, detail="Пост не найден")
-    
-    db.delete(post)
-    db.commit()
-    return
-
-
-@app.put("/articles/{id}", response_model=PostOut)
+@post_router.put("/{id}", response_model=PostOut)
 def update_article(id: int, data: PostUpdate, db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == id).first()
     if not post:
@@ -215,25 +128,26 @@ def update_article(id: int, data: PostUpdate, db: Session = Depends(get_db)):
         comments_count=comments_count
     )
 
-@app.get("/comments/")
-def get_comments(db: Session = Depends(get_db)):
-    comments = db.query(Comment).all()
-    return comments
 
-@app.get("/comments/{id}")
-def get_comment(id: int, db: Session = Depends(get_db)):
-    return db.query(Comment).filter(Comment.id==id).first()
+@post_router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_article(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(Post).filter(Post.id==post_id).first()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Пост не найден")
+    
+    db.delete(post)
+    db.commit()
+    return
 
 
-@app.get("/articles/{id}/comments", response_model=list[CommentOut])
+@post_router.get("/{id}/comments", response_model=list[CommentOut])
 def get_comments(id: int, db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == id).first()
-    # post = get_object_or_404(Post, id=id)
     if not post:
         raise HTTPException(status_code=404, detail="Статья не найдена")
     
     comments = db.query(Comment).filter(Comment.post_id == id).order_by(Comment.created_at.desc()).all()
-    # comments = post.comments.all().select_related('author').order_by('-created_at')
     
     result = []
     for comment in comments:
@@ -247,45 +161,3 @@ def get_comments(id: int, db: Session = Depends(get_db)):
         ))
     
     return result
-
-
-@app.post("/articles/{id}/comments")
-def create_comments(id: int, comment_data: CommentCreate, db: Session = Depends(get_db)):
-    post = db.query(Post).filter(Post.id == id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    new_comment = Comment(
-        text=comment_data.text,
-        author_id=comment_data.author_id,
-        post_id=id,
-        created_at=datetime.datetime.now()
-    )
-
-    db.add(new_comment)
-    db.commit()
-    db.refresh(new_comment)
-    return
-
-@app.delete("/comments/{id}")
-def comment_delete(id: int, db: Session = Depends(get_db)):
-    comment = db.query(Comment).filter(Comment.id==id).first()
-
-    if not comment:
-        raise HTTPException(status_code=404, detail="Comment not found")
-
-    db.delete(comment)
-    db.commit()
-    return
-
-@app.put("/comments/{id}")
-def comment_update(id: int, data: CommentUpdate, db: Session = Depends(get_db)):
-    comment = db.query(Comment).filter(Comment.id==id).first()
-
-    if data.text is not None:
-        comment.text = data.text
-
-    db.commit()
-    db.refresh(comment)
-
-    return
