@@ -5,9 +5,11 @@ from fastapi import FastAPI, Depends
 from fastapi.responses import HTMLResponse
 from crud.post import post_router
 from crud.comments import comment_router
+from auth import JWTAuthMiddleware
 
 
 app = FastAPI()
+app.add_middleware(JWTAuthMiddleware)
 
 app.include_router(post_router, prefix="/articles", tags=["posts"])
 app.include_router(comment_router, prefix="/comments", tags=["comments"])

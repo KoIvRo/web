@@ -11,6 +11,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import datetime
+
+JWT_SECRET_KEY = "KEY"
+JWT_ALGORITHM = "HS256"
+JWT_ACCESS_LIFETIME = datetime.timedelta(minutes=15)
+JWT_REFRESH_LIFETIME = datetime.timedelta(days=7)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
