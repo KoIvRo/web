@@ -18,31 +18,30 @@ API_URL = "http://127.0.0.1:8001"
 """
 
 
-"""
-НАДО В МЕТОДАХ С МЕТКОЙ ДОДЕЛАТЬ ДОБАВИТЬ ТОКЕНЫ В ЗАГОДВОКИ ДЛЯ ОТПРАВКИ НА API
-"""
-
 def get_api_data(url, request):
-    headers = {}
     access, refresh = None, None
+    new_access = None
     if request:
         access = request.COOKIES.get("access_token")
         refresh = request.COOKIES.get("refresh_token")
 
     if not access and refresh:
-        access = refresh_access_token(refresh)
+        new_access = refresh_access_token(refresh)
+        if new_access:
+            response = HttpResponseRedirect(request.path_info)
+            response.set_cookie("access_token", access, httponly=True, samesite="Lax", max_age=60*15)
+            return response
 
-    # Взял куки подставил в заголовок
-    if access:
-        headers["Authorization"] = f"Bearer {access}"
+    headers = create_headers(request)
 
     try:
         response = requests.get(f"{API_URL}{url}", headers=headers)
-        print(response.status_code, access)
-        # Если исключение не пробросилось, значит access токен не валиден и api активен
         if response.status_code == 200:
             return response.json()
+        # Если исключение не пробросилось, значит access токен не валиден и api активен
         if response.status_code != 200 and access:
+            if refresh:
+                access = refresh_access_token(refresh)
             response = HttpResponseRedirect(request.path_info)
             response.set_cookie("access_token", access, httponly=True, samesite="Lax", max_age=60*15)
             return response
@@ -52,6 +51,25 @@ def get_api_data(url, request):
         # Исключение когда отказ соединения
         return None
 
+
+# Возвращаем заголовок с токенами
+# Тут же пытаемся сделать refresh access токена
+def create_headers(request):
+    access, refresh = None, None
+    access = request.COOKIES.get("access_token")
+    if not access:
+        refresh = request.COOKIES.get("refresh_token")
+        if refresh:
+            access = refresh_access_token(refresh)
+    if access:
+        #request.set_cookies("access_token", access)
+        headers = {}
+        headers["Authorization"] = f"Bearer {access}"
+    try:
+        return headers
+    except Exception as e:
+        return None
+        
 
 def index(request):
     latest_posts = get_api_data("/articles/", request)
@@ -98,7 +116,7 @@ def register(request):
                 max_age=60*60*24*7
             )
 
-            return redirect('home')
+            return response
     else:
         form = UserRegisterForm()
     return render(request, 'main/register.html', {'form': form})
@@ -122,7 +140,7 @@ def custom_login(request):
             response.set_cookie(
                 "access_token",
                 access,
-                httponly=True, # Защита от XSS JS не может получить данные из этого заголовка
+                httponly=True, # Защита от XSS, JS не может получить данные из этого заголовка
                 secure=False, # Передача только по HTTPS, если True
                 samesite="Lax", # Отправка куи при переходе по ссылкам
                 max_age=60*15
@@ -148,9 +166,6 @@ def custom_logout(request):
     logout(request)
     return response
 
-def portfolio(request):
-    return render(request, "main/portfolio.html")
-
 def blog_list(request, category=None):
     message = None
     if category:
@@ -172,7 +187,6 @@ def blog_list(request, category=None):
         })
 
 
-# Доделать POST запрос с jwt
 def blog_detail(request, id):
     post = get_api_data(f"/articles/{id}", request)
     if not post:
@@ -185,9 +199,12 @@ def blog_detail(request, id):
                 "author_id": request.user.id,
                 "post_id": id
             }
+
+            headers = create_headers(request)
+
             try:
-                resp = requests.post(f"{API_URL}/comments", json=payload)
-            except:
+                requests.post(f"{API_URL}/comments", headers=headers, json=payload)
+            except Exception as e:
                 return redirect("blog_detail", id)
             return redirect("blog_detail", id)
     else:
@@ -196,6 +213,124 @@ def blog_detail(request, id):
     comments = get_api_data(f"/articles/{id}/comments", request)
     return render(request, "main/blog_detail.html", {"post": post, "comments": comments, "form": form})
 
+@login_required
+def add_post(request):
+    if request.method == 'POST':
+        form = PostForm(request.POST)
+        if form.is_valid():
+            payload = {
+                "title": form.cleaned_data['title'],
+                "content": form.cleaned_data['content'],
+                "category": form.cleaned_data['category'],
+                "author_id": request.user.id
+            }
+            headers = create_headers(request)
+            try:
+                resp = requests.post(f"{API_URL}/articles/", headers=headers, json=payload)
+            except:
+                return redirect('blog_list')
+            if resp.status_code == 201:
+                return redirect('blog_list')
+    else:
+        form = PostForm()
+
+    return render(request,'main/add_post.html', {"form": form})
+
+@login_required
+def delete_post(request, id):
+    headers = create_headers(request)
+    try:
+        requests.delete(f"{API_URL}/articles/{id}", headers=headers)
+    except:
+        return redirect("home")
+    
+    return redirect('blog_list')
+
+@login_required
+def edit_post(request, id):
+    headers = create_headers(request)
+    resp = requests.get(f"{API_URL}/articles/{id}", headers=headers)
+    if resp.status_code == 404:
+        return redirect('blog_list')
+    post_data = resp.json()
+
+    if request.method == 'POST':
+        form = PostForm(request.POST)
+        if form.is_valid():
+            updated_data = {
+                "title": form.cleaned_data["title"],
+                "content": form.cleaned_data["content"],
+                "category": form.cleaned_data["category"],
+            }
+            try:
+                put_resp = requests.put(f"{API_URL}/articles/{id}", headers=headers, json=updated_data)
+            except:
+                return redirect('blog_detail', id=id)
+            if put_resp.status_code == 200:
+                return redirect('blog_detail', id=id)
+    else:
+        form = PostForm(initial={
+            "title": post_data["title"],
+            "content": post_data["content"],
+            "category": post_data["category"],
+        })
+
+    return render(request, 'main/edit_post.html', {'form': form})
+
+@login_required
+def delete_comment(request, comment_id, post_id):
+    post = get_api_data(f"/articles/{post_id}", request)
+    comment = get_api_data(f"/comments/{comment_id}", request)
+
+    if not (comment['author_id'] == request.user.id or 
+            post['author_id'] == request.user.id or 
+            request.user.is_staff):
+        return redirect('blog_detail', id=post_id)
+
+    headers = create_headers(request)
+    try:
+        requests.delete(f"{API_URL}/comments/{comment_id}", headers=headers)
+    except:
+        return redirect('blog_detail', id=post_id)
+    return redirect('blog_detail', id=post_id)
+
+@login_required
+def edit_comment(request, comment_id, post_id):
+    post = get_api_data(f"/articles/{post_id}", request)
+    comment = get_api_data(f"/comments/{comment_id}", request)
+
+    if not (comment['author_id'] == request.user.id or 
+            post['author_id'] == request.user.id or 
+            request.user.is_staff):
+        return redirect('blog_detail', id=post_id)
+    headers = create_headers(request)
+    try:
+        resp = requests.get(f"{API_URL}/comments/{comment_id}", headers=headers)
+    except:
+        return redirect('blog_detail', post_id)
+    if not resp:
+        return redirect('blog_detail', post_id)
+    
+    comment_data = resp.json()
+
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            updated_data = {
+                "text": form.cleaned_data["text"],
+            }
+            try:
+                put_resp = requests.put(f"{API_URL}/comments/{comment_id}", headers=headers, json=updated_data)
+            except:
+                return redirect('blod_detail', id=post_id)
+            if put_resp.status_code == 200:
+                return redirect('blog_detail', id=post_id)
+    else:
+        form = CommentForm(initial={
+            "text": comment_data["text"],
+        })
+
+    return render(request, 'main/edit_comment.html', {'form': form})
 
 def feedback(request):
     if request.method == 'POST':
@@ -213,122 +348,5 @@ def feedback(request):
         form = FeedbackForm()
     return render(request, 'main/feedback.html', {'form': form})
 
-# Доделать POST с jwt
-@login_required
-def add_post(request):
-    if request.method == 'POST':
-        form = PostForm(request.POST)
-        if form.is_valid():
-            payload = {
-                "title": form.cleaned_data['title'],
-                "content": form.cleaned_data['content'],
-                "category": form.cleaned_data['category'],
-                "author_id": request.user.id
-            }
-            try:
-                resp = requests.post(f"{API_URL}/articles/", json=payload)
-            except:
-                return redirect('blog_list')
-            if resp.status_code == 201:
-                return redirect('blog_list')
-    else:
-        form = PostForm()
-
-    return render(request,'main/add_post.html', {"form": form})
-
-# Доделать
-@login_required
-def delete_post(request, id):
-    try:
-        requests.delete(f"{API_URL}/articles/{id}")
-    except:
-        return redirect("home")
-    
-    return redirect('blog_list')
-
-# Доделать
-@login_required
-def edit_post(request, id):
-    resp = requests.get(f"{API_URL}/articles/{id}")
-    if resp.status_code == 404:
-        return redirect('blog_list')
-    post_data = resp.json()
-
-    if request.method == 'POST':
-        form = PostForm(request.POST)
-        if form.is_valid():
-            updated_data = {
-                "title": form.cleaned_data["title"],
-                "content": form.cleaned_data["content"],
-                "category": form.cleaned_data["category"],
-            }
-            try:
-                put_resp = requests.put(f"{API_URL}/articles/{id}", json=updated_data)
-            except:
-                return redirect('blog_detail', id=id)
-            if put_resp.status_code == 200:
-                return redirect('blog_detail', id=id)
-    else:
-        form = PostForm(initial={
-            "title": post_data["title"],
-            "content": post_data["content"],
-            "category": post_data["category"],
-        })
-
-    return render(request, 'main/edit_post.html', {'form': form})
-
-# Доделать
-@login_required
-def delete_comment(request, comment_id, post_id):
-    post = get_api_data(f"/articles/{post_id}")
-    comment = get_api_data(f"/comments/{comment_id}")
-
-    if not (comment['author_id'] == request.user.id or 
-            post['author_id'] == request.user.id or 
-            request.user.is_staff):
-        return redirect('blog_detail', id=post_id)
-
-    try:
-        resp = requests.delete(f"{API_URL}/comments/{comment_id}")
-    except:
-        return redirect('blog_detail', id=post_id)
-    return redirect('blog_detail', id=post_id)
-
-# Доделать
-@login_required
-def edit_comment(request, comment_id, post_id):
-    post = get_api_data(f"/articles/{post_id}")
-    comment = get_api_data(f"/comments/{comment_id}")
-
-    if not (comment['author_id'] == request.user.id or 
-            post['author_id'] == request.user.id or 
-            request.user.is_staff):
-        return redirect('blog_detail', id=post_id)
-
-    try:
-        resp = requests.get(f"{API_URL}/comments/{comment_id}")
-    except:
-        return redirect('blog_detail', post_id)
-    if not resp:
-        return redirect('blog_detail', post_id)
-    
-    comment_data = resp.json()
-
-    if request.method == 'POST':
-        form = CommentForm(request.POST)
-        if form.is_valid():
-            updated_data = {
-                "text": form.cleaned_data["text"],
-            }
-            try:
-                put_resp = requests.put(f"{API_URL}/comments/{comment_id}", json=updated_data)
-            except:
-                return redirect('blod_detail', id=post_id)
-            if put_resp.status_code == 200:
-                return redirect('blog_detail', id=post_id)
-    else:
-        form = CommentForm(initial={
-            "text": comment_data["text"],
-        })
-
-    return render(request, 'main/edit_comment.html', {'form': form})
+def portfolio(request):
+    return render(request, "main/portfolio.html")
