@@ -29,31 +29,27 @@ def get_api_data(url, request):
         access = request.COOKIES.get("access_token")
         refresh = request.COOKIES.get("refresh_token")
 
+    if not access and refresh:
+        access = refresh_access_token(refresh)
+
     # Взял куки подставил в заголовок
     if access:
         headers["Authorization"] = f"Bearer {access}"
 
     try:
         response = requests.get(f"{API_URL}{url}", headers=headers)
-
-        # Пытаюсь подянуть куки из refresh_token
-        if response.status_code != 200 and refresh:
-            refresh_access = refresh_access_token(refresh)
-            if refresh_access:
-                response = HttpResponseRedirect(request.path_info)
-                response.set_cookie("access_token", refresh_access, httponly=True)
-                headers['Authorization'] = f"Bearer {refresh_access}"
-                return response
-
+        print(response.status_code, access)
+        # Если исключение не пробросилось, значит access токен не валиден и api активен
         if response.status_code == 200:
             return response.json()
-        
-        # Если ничего не вышло
+        if response.status_code != 200 and access:
+            response = HttpResponseRedirect(request.path_info)
+            response.set_cookie("access_token", access, httponly=True, samesite="Lax", max_age=60*15)
+            return response
         else:
-            redirect("logout")
-        return None
-    except Exception as e:
-        print(e)
+            return None
+    except:
+        # Исключение когда отказ соединения
         return None
 
 
