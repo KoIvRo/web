@@ -46,6 +46,7 @@ def get_api_data(url, request):
             response.set_cookie("access_token", access, httponly=True, samesite="Lax", max_age=60*15)
             return response
         else:
+            logout(request)
             return None
     except:
         # Исключение когда отказ соединения
