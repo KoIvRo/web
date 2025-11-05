@@ -5,6 +5,8 @@ import Header from './components/Header';
 import Home from './components/Home';
 import BlogList from './components/Blog/bloglist';
 import BlogDetail from './components/Blog/blogdetail';
+import AddPost from './components/Blog/addpost';
+import EditPost from './components/Blog/editpost';
 import Login from './components/Auth/login';
 import Register from './components/Auth/register';
 import './styles/App.css';
@@ -19,6 +21,9 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/blog" element={<BlogList />} />
+              <Route path="/blog/category/:category" element={<BlogList />} />
+              <Route path="/blog/add" element={<AddPost />} />
+              <Route path="/blog/edit/:id" element={<EditPost />} />
               <Route path="/blog/:id" element={<BlogDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

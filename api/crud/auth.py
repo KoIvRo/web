@@ -143,7 +143,7 @@ async def refresh_token(
     
     user_id = payload.get("user_id")
     username = payload.get("username")
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
@@ -182,9 +182,7 @@ async def logout(response: Response):
     return {"message": "Successfully logged out"}
 
 @router.get("/me")
-async def get_current_user_info(
-    current_user: User = Depends(get_current_user)
-):
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "username": current_user.username,

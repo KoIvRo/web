@@ -4,11 +4,10 @@ from enum import Enum
 
 
 class CategoryEnum(str, Enum):
-    PROGRAMMING = "programming"
-    DJANGO = "django"
-    PYTHON = "python"
-    WEB = "web"
-    OTHER = "other"
+    technology = "technology"
+    programming = "programming" 
+    science = "science"
+    other = "other"
 
 
 class PostOut(BaseModel):

@@ -8,14 +8,11 @@ const Header = () => {
   const { isAuthenticated, logout } = useAuth();
 
   const handleLogout = () => {
-    // Просто удаляем куки с токенами
     deleteCookie('access_token');
     deleteCookie('refresh_token');
     
-    // Обновляем состояние в контексте
     logout();
-    
-    // Перезагружаем страницу для чистого состояния
+
     window.location.href = '/';
   };
 

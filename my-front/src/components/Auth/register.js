@@ -15,7 +15,6 @@ const Register = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
 
-  // Если пользователь уже авторизован, перенаправляем на главную
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/');
@@ -55,7 +54,6 @@ const Register = () => {
       // Обновляем состояние аутентификации
       login();
 
-      // Перенаправляем на главную
       navigate('/');
       
     } catch (error) {
@@ -71,7 +69,6 @@ const Register = () => {
     }
   };
 
-  // ... остальной код без изменений ...
   return (
     <section className="hero">
       <div className="container">

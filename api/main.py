@@ -11,6 +11,7 @@ from auth import JWTAuthMiddleware
 
 app = FastAPI()
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -20,6 +21,7 @@ app.add_middleware(
 )
 
 app.add_middleware(JWTAuthMiddleware)
+
 
 app.include_router(post_router, prefix="/articles", tags=["posts"])
 app.include_router(comment_router, prefix="/comments", tags=["comments"])

@@ -31,14 +31,12 @@ const Login = () => {
         password: formData.password
       });
 
-      // Сохраняем токены в куки
       setCookie('access_token', tokens.access, 15);
       setCookie('refresh_token', tokens.refresh, 60*24*7);
 
       // Обновляем состояние аутентификации
       login();
 
-      // Перенаправляем на главную
       navigate('/');
       
     } catch (error) {
@@ -54,7 +52,6 @@ const Login = () => {
     }
   };
 
-  // ... остальной код без изменений ...
   return (
     <section className="hero">
       <div className="container">
