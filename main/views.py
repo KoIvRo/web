@@ -98,8 +98,6 @@ def register(request):
 
             access = create_access_token(user.id)
             refresh = create_refresh_token(user.id)
-            request.session["access_token"] = access
-            request.session["refresh_token"] = refresh
 
             response = redirect("home")
             response.set_cookie(
@@ -134,8 +132,6 @@ def custom_login(request):
 
             access = create_access_token(user.id)
             refresh = create_refresh_token(user.id)
-            request.session["access_token"] = access
-            request.session["refresh_token"] = refresh
 
             response = redirect('home')
             response.set_cookie(

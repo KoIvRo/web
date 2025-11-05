@@ -49,3 +49,27 @@ class CommentOut(BaseModel):
     text: str
     author_name: str
     created_at: str
+
+
+# Новые схемы
+class UserBase(BaseModel):
+    username: str
+    email: Optional[str] = None
+
+class UserCreate(BaseModel):
+    username: str
+    email: Optional[str] = None
+    password1: str
+    password2: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access: str
+    refresh: str
+
+class TokenData(BaseModel):
+    user_id: int
+    username: str

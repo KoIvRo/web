@@ -11,7 +11,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(150))
     email = Column(String(254))
-
+    password = Column(String(128))
 
 class Post(Base):
     __tablename__ = "main_post"
