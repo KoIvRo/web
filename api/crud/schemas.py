@@ -59,8 +59,7 @@ class UserBase(BaseModel):
 class UserCreate(BaseModel):
     username: str
     email: Optional[str] = None
-    password1: str
-    password2: str
+    password: str
 
 class UserLogin(BaseModel):
     username: str

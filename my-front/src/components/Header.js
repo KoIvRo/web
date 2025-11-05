@@ -1,28 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { getCookie, logout } from '../services/api';
-import logo from '../assets/logo.jpg'
+import { deleteCookie } from '../services/api';
+import { useAuth } from './context/AuthContext';
+import logo from '../assets/logo.jpg';
 
 const Header = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    // Проверяем авторизацию при загрузке компонента и при изменении
-    const checkAuth = () => {
-      const accessToken = getCookie('access_token');
-      setIsAuthenticated(!!accessToken);
-    };
-
-    checkAuth();
-
-    // Проверяем авторизацию каждые 30 секунд
-    const interval = setInterval(checkAuth, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const { isAuthenticated, logout } = useAuth();
 
   const handleLogout = () => {
-    logout(); // Эта функция уже удаляет куки и перенаправляет
+    // Просто удаляем куки с токенами
+    deleteCookie('access_token');
+    deleteCookie('refresh_token');
+    
+    // Обновляем состояние в контексте
+    logout();
+    
+    // Перезагружаем страницу для чистого состояния
+    window.location.href = '/';
   };
 
   return (

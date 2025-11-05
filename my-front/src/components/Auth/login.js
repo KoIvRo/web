@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authAPI, setCookie, getCookie } from '../../services/api';
+import { authAPI, setCookie } from '../../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -10,14 +11,14 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
 
   // Если пользователь уже авторизован, перенаправляем на главную
   useEffect(() => {
-    const accessToken = getCookie('access_token');
-    if (accessToken) {
+    if (isAuthenticated) {
       navigate('/');
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,15 +26,17 @@ const Login = () => {
     setErrors({});
 
     try {
-      // Предполагаем, что ваш бэкенд возвращает {access, refresh}
       const tokens = await authAPI.login({
         username: formData.username,
         password: formData.password
       });
 
       // Сохраняем токены в куки
-      setCookie('access_token', tokens.access, 15); // 15 минут
-      setCookie('refresh_token', tokens.refresh, 60*24*7); // 7 дней
+      setCookie('access_token', tokens.access, 15);
+      setCookie('refresh_token', tokens.refresh, 60*24*7);
+
+      // Обновляем состояние аутентификации
+      login();
 
       // Перенаправляем на главную
       navigate('/');
@@ -41,7 +44,6 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error);
       
-      // Обработка ошибок от API
       if (error.response?.data) {
         setErrors(error.response.data);
       } else {
@@ -52,20 +54,7 @@ const Login = () => {
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    // Очищаем ошибки при изменении поля
-    if (errors[e.target.name]) {
-      setErrors({
-        ...errors,
-        [e.target.name]: ''
-      });
-    }
-  };
-
+  // ... остальной код без изменений ...
   return (
     <section className="hero">
       <div className="container">
@@ -77,14 +66,20 @@ const Login = () => {
           </div>
         )}
 
+        {errors.detail && (
+          <div className="error-message">
+            {errors.detail}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <input
               type="text"
               name="username"
-              placeholder="Имя пользователя"
+              placeholder="Логин"
               value={formData.username}
-              onChange={handleChange}
+              onChange={(e) => setFormData({...formData, username: e.target.value})}
               className={errors.username ? 'error' : ''}
               required
             />
@@ -97,7 +92,7 @@ const Login = () => {
               name="password"
               placeholder="Пароль"
               value={formData.password}
-              onChange={handleChange}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
               className={errors.password ? 'error' : ''}
               required
             />

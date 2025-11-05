@@ -1,10 +1,8 @@
 from fastapi import Request, HTTPException, Depends
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.status import HTTP_401_UNAUTHORIZED
 import jwt
 from jwt import ExpiredSignatureError, InvalidTokenError
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
 from database.database import get_db
 from database.models import User
 from sqlalchemy.orm import Session
@@ -13,9 +11,21 @@ SECRET_KEY = "KEY"
 ALGORITHM = "HS256"
 REFRESH_SECRET_KEY = "REFRESH_KEY"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from passlib.hash import django_pbkdf2_sha256
 
-# Существующие функции
+class SimplePasswordHasher:
+    @staticmethod
+    def verify(plain_password, hashed_password):
+        # Используем Django-совместимый верификатор
+        return django_pbkdf2_sha256.verify(plain_password, hashed_password)
+    
+    @staticmethod
+    def hash(password):
+        # Генерируем хэш в том же формате, что и существующие пользователи
+        return django_pbkdf2_sha256.hash(password, rounds=1000000)
+
+pwd_context = SimplePasswordHasher()
+
 def verify_jwt(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -24,13 +34,6 @@ def verify_jwt(token: str):
         return payload
     except (ExpiredSignatureError, InvalidTokenError):
         return None
-
-# НОВЫЕ ФУНКЦИИ ДЛЯ АУТЕНТИФИКАЦИИ
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
 
 def create_access_token(user_id: int, username: str):
     expires_delta = timedelta(minutes=15)
@@ -73,12 +76,13 @@ def authenticate_user(db: Session, username: str, password: str):
     if not user:
         return False
     
-    # Проверяем пароль
-    if not verify_password(password, user.password):
+    if not pwd_context.verify(password, user.password):
         return False
     return user
 
-# ЗАВИСИМОСТЬ ДЛЯ ПОЛУЧЕНИЯ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
 async def get_current_user(request: Request, db: Session = Depends(get_db)):
     access_token = None
     auth_header = request.headers.get("Authorization")
@@ -104,10 +108,21 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Пропускаем аутентификацию для публичных эндпоинтов
-        if request.url.path in ["/docs", "/redoc", "/openapi.json", "/api/register", "/api/login", "/api/token/refresh", "/"]:
+        # РАЗРЕШАЕМ OPTIONS ЗАПРОСЫ (CORS preflight)
+        if request.method == "OPTIONS":
             return await call_next(request)
             
+        # Публичные эндпоинты (без аутентификации)
+        public_paths = [
+            "/docs", "/redoc", "/openapi.json", 
+            "/api/register", "/api/login", "/api/token/refresh", 
+            "/", "/categories/"
+        ]
+        
+        if request.url.path in public_paths:
+            return await call_next(request)
+            
+        # Для защищенных эндпоинтов проверяем токен
         access_token = None
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
