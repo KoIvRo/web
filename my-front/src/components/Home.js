@@ -46,9 +46,6 @@ const Home = () => {
             <a className="btn primary" href="tel:+77777777777">
               Позвонить
             </a>
-            <Link className="btn ghost" to="/portfolio">
-              Портфолио
-            </Link>
           </div>
         </div>
       </section>
